@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/gomodule/redigo/redis"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/lozovoya/agohomework5/cmd/app/dto"
 	"github.com/lozovoya/agohomework5/cmd/app/md"
@@ -14,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"log"
 	"net/http"
+	"time"
 )
 
 var (
@@ -47,10 +49,11 @@ type Server struct {
 	ctxCli  context.Context
 	dbSug   *mongo.Database
 	ctxSug  context.Context
+	cache   *redis.Pool
 }
 
-func NewServer(mux chi.Router, poolCli *pgxpool.Pool, ctxCli context.Context, dbsug *mongo.Database, ctxSug context.Context) *Server {
-	return &Server{mux: mux, poolCli: poolCli, ctxCli: ctxCli, dbSug: dbsug, ctxSug: ctxSug}
+func NewServer(mux chi.Router, poolCli *pgxpool.Pool, ctxCli context.Context, dbsug *mongo.Database, ctxSug context.Context, cache *redis.Pool) *Server {
+	return &Server{mux: mux, poolCli: poolCli, ctxCli: ctxCli, dbSug: dbsug, ctxSug: ctxSug, cache: cache}
 }
 
 func (s *Server) Init() error {
@@ -78,6 +81,7 @@ func (s *Server) Payments(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user User
+	time.Sleep(time.Second * 10)
 	err := s.dbSug.Collection("users").FindOne(s.ctxSug,
 		bson.D{{"userid", userid}}).Decode(&user)
 	if err != nil {

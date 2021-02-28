@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/go-chi/chi"
+	"github.com/gomodule/redigo/redis"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/lozovoya/agohomework5/cmd/app"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -18,6 +19,7 @@ const defaultHost = "0.0.0.0"
 const clientsDb = "postgres://app:pass@localhost:5432/db"
 const suggestionDb = "mongodb://app:pass@localhost:27017/" + defaultDb
 const defaultDb = "db"
+const defaultcacheDSN = "redis://localhost:6379/0"
 
 func main() {
 	port, ok := os.LookupEnv("PORT")
@@ -30,13 +32,18 @@ func main() {
 		host = defaultHost
 	}
 
-	if err := execute(net.JoinHostPort(host, port), clientsDb, suggestionDb, defaultDb); err != nil {
+	cacheDSN, ok := os.LookupEnv("CacheDSN")
+	if !ok {
+		cacheDSN = defaultcacheDSN
+	}
+
+	if err := execute(net.JoinHostPort(host, port), clientsDb, suggestionDb, defaultDb, cacheDSN); err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
 }
 
-func execute(addr string, cliDb string, sugDb string, db string) error {
+func execute(addr string, cliDb string, sugDb string, db string, cacheDSN string) error {
 
 	mux := chi.NewMux()
 
@@ -55,7 +62,13 @@ func execute(addr string, cliDb string, sugDb string, db string) error {
 
 	database := clientSug.Database(db)
 
-	application := app.NewServer(mux, poolCli, ctxCliDb, database, ctxSugDb)
+	cache := &redis.Pool{
+		DialContext: func(ctx context.Context) (redis.Conn, error) {
+			return redis.DialURL(cacheDSN)
+		},
+	}
+
+	application := app.NewServer(mux, poolCli, ctxCliDb, database, ctxSugDb, cache)
 	err = application.Init()
 	if err != nil {
 		return err
