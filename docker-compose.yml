@@ -1,0 +1,24 @@
+
+version: '3.7'
+
+services:
+  clientsdb:
+    image: postgres:13.1-alpine
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_USER=app
+      - POSTGRES_DB=db
+    volumes:
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
+
+
+  suggestionsdb:
+    image: mongo:4
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_DATABASE=db
+    volumes:
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
