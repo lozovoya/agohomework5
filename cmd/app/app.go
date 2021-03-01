@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/gomodule/redigo/redis"
@@ -80,8 +81,16 @@ func (s *Server) Payments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if cached, err := s.FromCache(r.Context(), fmt.Sprintf("id:%d", userid)); err == nil {
+		log.Println("got from cache #{cached}")
+		w.Header().Set("Content-type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, err = w.Write(cached)
+		return
+	}
+
 	var user User
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 3)
 	err := s.dbSug.Collection("users").FindOne(s.ctxSug,
 		bson.D{{"userid", userid}}).Decode(&user)
 	if err != nil {
@@ -92,12 +101,23 @@ func (s *Server) Payments(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(user)
+	body, err := json.Marshal(user)
 	if err != nil {
-		log.Println(err)
+		log.Println()
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	_, err = w.Write(body)
+	if err != nil {
+		log.Println()
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	go func() {
+		_ = s.ToCache(r.Context(), fmt.Sprintf("id:%d", userid), body)
+	}()
+
 }
 
 func (s *Server) AddSuggestion(w http.ResponseWriter, r *http.Request) {
@@ -139,4 +159,52 @@ func (s *Server) AddSuggestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) ToCache(ctx context.Context, key string, value []byte) error {
+	conn, err := s.cache.GetContext(ctx)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	defer func() {
+		if cerr := conn.Close(); cerr != nil {
+			log.Print(cerr)
+		}
+	}()
+
+	_, err = redis.DoWithTimeout(conn, time.Millisecond*50, "SET", key, value)
+	if err != nil {
+		log.Println(err)
+
+	}
+	return err
+}
+
+func (s *Server) FromCache(ctx context.Context, key string) ([]byte, error) {
+	conn, err := s.cache.GetContext(ctx)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	defer func() {
+		if cerr := conn.Close(); cerr != nil {
+			log.Print(cerr)
+		}
+	}()
+
+	reply, err := redis.DoWithTimeout(conn, time.Millisecond*50, "GET", key)
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
+
+	value, err := redis.Bytes(reply, err)
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
+	return value, err
 }

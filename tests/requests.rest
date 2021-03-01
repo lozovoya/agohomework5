@@ -1,17 +1,17 @@
-### без токена
-GET http://localhost:9999/payments
+### Список операций и предсказаний для userid 1 из Mongo
+GET http://localhost:9999/payments?token=$2a$04$zWiNgAN9OXAX9iEFsqYXyuXxtXgEOn5qOIpw4x9Wnp6DJsTAOwnpO
 
-### Список операций и предсказаний
+### Список операций и предсказаний для userid 1 из Redis
+GET http://localhost:9999/payments?token=$2a$04$zWiNgAN9OXAX9iEFsqYXyuXxtXgEOn5qOIpw4x9Wnp6DJsTAOwnpO
+
+### Список операций и предсказаний, userid 2 из Mongo
 GET http://localhost:9999/payments?token=$2a$04$zWiNgAN9OXAX9iEFsqYXyuXxtXgEOn5qOIpw4x9Wnp6DJsTAOwnp2
 
-### Добавить предсказание
-POST http://localhost:9999/addsuggestion?token=$2a$04$zWiNgAN9OXAX9iEFsqYXyuXxtXgEOn5qOIpw4x9Wnp6DJsTAOwnp4
-Content-Type: application/json
+### Список операций и предсказаний, userid 2 из Redis
+GET http://localhost:9999/payments?token=$2a$04$zWiNgAN9OXAX9iEFsqYXyuXxtXgEOn5qOIpw4x9Wnp6DJsTAOwnp2
 
-{
-  "userid": 2,
-  "sugid":8790,
-  "icon":"dshfdsf",
-  "title":"dgfdgfdg",
-  "link":"dsffsg"
-}
+### Список операций и предсказаний для userid 1 из Redis
+GET http://localhost:9999/payments?token=$2a$04$zWiNgAN9OXAX9iEFsqYXyuXxtXgEOn5qOIpw4x9Wnp6DJsTAOwnpO
+
+### Список операций и предсказаний, userid 2 из Redis
+GET http://localhost:9999/payments?token=$2a$04$zWiNgAN9OXAX9iEFsqYXyuXxtXgEOn5qOIpw4x9Wnp6DJsTAOwnp2
