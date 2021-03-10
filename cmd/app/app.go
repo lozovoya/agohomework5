@@ -74,8 +74,16 @@ func (s *Server) Init() error {
 
 func (s *Server) Payments(w http.ResponseWriter, r *http.Request) {
 
+	token := md.GetToken(r)
 	var userid = 0
-	userid = md.GetUserId(r)
+	err := s.poolCli.QueryRow(s.ctxCli,
+		"SELECT id FROM users WHERE token = $1", token).Scan(&userid)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	if userid == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -91,7 +99,7 @@ func (s *Server) Payments(w http.ResponseWriter, r *http.Request) {
 
 	var user User
 	time.Sleep(time.Second * 3)
-	err := s.dbSug.Collection("users").FindOne(s.ctxSug,
+	err = s.dbSug.Collection("users").FindOne(s.ctxSug,
 		bson.D{{"userid", userid}}).Decode(&user)
 	if err != nil {
 		log.Println(err)
@@ -122,15 +130,23 @@ func (s *Server) Payments(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) AddSuggestion(w http.ResponseWriter, r *http.Request) {
 
+	token := md.GetToken(r)
 	var userid = 0
-	userid = md.GetUserId(r)
+	err := s.poolCli.QueryRow(s.ctxCli,
+		"SELECT id FROM users WHERE token = $1", token).Scan(&userid)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	if userid == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	var newSuggestion *dto.SuggestionDTO
-	err := json.NewDecoder(r.Body).Decode(&newSuggestion)
+	err = json.NewDecoder(r.Body).Decode(&newSuggestion)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusBadRequest)

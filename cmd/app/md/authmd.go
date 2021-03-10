@@ -63,9 +63,6 @@ func AuthMD(poolCli *pgxpool.Pool, ctxCli context.Context) func(http.Handler) ht
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), userIdContextKey, &userid)
-			r = r.WithContext(ctx)
-			log.Println(ctx)
 			handler.ServeHTTP(w, r)
 		})
 	}
